@@ -1,8 +1,9 @@
 openapi: 3.0.3
 info:
-  title: Industry 5.0 API
+  title: Animal Crossing Gacha - OpenAPI 3.0
   description: |-
-    Group C, Topic 4 OpenAPI doc (on topic 2, 3).
+    Cool description of our cool APIs.<br>
+    Authorization stuff and scopes are still being investigated, as well as authentication, and they all are to be considered as placeholder for now.
 
   #termsOfService: http://swagger.io/terms/
   #contact:
@@ -17,75 +18,146 @@ info:
 #servers:
 #  - url: 
 tags:
-  - name: alerts
-    description: Alerts history
-  - name: data
-    description: DB data access
-  - name: machines
-    description: Machines data
-  - name: KPIs
-    description: KPIs access
+  - name: user
+    description: User profiles operation
+  - name: gacha
+    description: Gacha service operations
+    #externalDocs:
+    #  description: Find out more
+    #  url: http://swagger.io
+  - name: auction
+    description: Auction house access and operations
+  - name: transaction
+    description: Transactions operations
+  - name: admin
+    description: Administration access and operations
 paths:
-
-  /alert:
+  #authentication?
+  /register:
     post:
       tags:
-        - alerts
-      summary: Posts new alert
-      description: ''
-      operationId: postAlert
+        - user
+      summary: Registers a new user account
+      description: Requires a request body. Returns the id of the new account in the response body.
+      operationId: postRegister
       requestBody:
-        description: 'Required Alert object to post'
+        description: 'Required information to make a new user account'
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Alert'
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: ResettiLover
+                email:
+                  type: string
+                  example: resetti4ever@email.com
       responses:
         '201':
-          description: Resouce created succesfully
+          $ref: '#/components/responses/ResourceCreated'
         '400':
-          description: Invalid Alert object
-    get:
+          description: Invalid User object
+
+  /user/login:
+    post:
       tags:
-        - alerts
-      summary: Gets alerts fitered by machine ID, severity, and time window
-      description: '`machineId`, `severity`, `from` (date), `to` (date) parameters optional in query.'
-      operationId: getAlerts
-      parameters:
-        - name: machineId
-          in: query
-          schema:
-            type: string
-        - name: severity
-          in: query
-          schema:
-            $ref: '#/components/schemas/Severity'
-        - name: from
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: to
-          in: query
-          schema:
-            type: string
-            format: date
+        - user
+      summary: Logs user into the system
+      description: ''
+      operationId: loginUser
+      requestBody:
+        description: 'Username and password object'
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
       responses:
         '200':
-          description: Succesful operation
+          description: Successful operation
+        '400':
+          description: Invalid username/password supplied
+  /user/logout:
+    delete:
+      tags:
+        - user
+      summary: Logs out current logged in user session
+      description: ''
+      operationId: logoutUser
+      responses:
+        default:
+          description: Successful operation
+  /user/{id}:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    get:
+      tags:
+        - user
+        - admin
+      summary: Get user profile by user id
+      description: 'Users can get the complete profile only of their own id. Other users&rsquo;  profiles are shown partially (GameData only). Admins can get the complete profile of any user.'
+      operationId: getUserById
+      responses:
+        '200':
+          description: Successful operation
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Alert'
-  /alert/{id}:
+                oneOf:
+                  - $ref: '#/components/schemas/User'
+                  - $ref: '#/components/schemas/GameData'
+        '404':
+          description: User not found
+    put:
+      tags:
+        - user
+        - admin
+      summary: Update user
+      description: 'This can only be done by the logged in user. Users can only modify their own profile, and only some fields. Admin can modify any profile, and any field.'
+      operationId: updateUser
+      requestBody:
+        description: 'Either a new screen name (only field users can modify) or a whole User object (admin-only operation).'
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: string
+                - $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Invalid content
+        '404':
+          description: User not found
+    delete:
+      tags:
+        - admin
+      summary: Deletes user
+      description: Admin-only operation.
+      operationId: deleteUser
+      responses:
+        '200':
+          description: Succesful operation
+        '404':
+          description: User not found
+      security:
+        - OAuth2: [admin]
+  /user/{id}/transaction-history:
     get:
       tags:
-        - alerts
-      summary: Gets single alert by alert ID
-      operationId: getAlertByID
+        - user
+        - admin
+      summary: Gets transaction history of a user
+      description: 'This can only be done by the logged in user. Users can only get their own transaction history. Admins can get any transaction history.'
+      operationId: getTransactionHistoryById
       parameters:
         - $ref: '#/components/parameters/id'
       responses:
@@ -94,126 +166,288 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Alert'
+                $ref: '#/components/schemas/TransactionHistory'
         '404':
-          description: ID not found
-      
-
-  /machine:
+          description: User not found
+  /user/{id}/collection:
     get:
       tags:
-        - machines
-      summary: Gets machines filtered by machine type, model, factory and status
-      description: '`machineType`, `model` `factory`, `status` parameters required in query.'
-      operationId: getMachines
+        - user
+      summary: Gets gacha collection of a user
+      description: ''
+      operationId: getCollectionById
       parameters:
-        - name: machineType
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'
+        '404':
+          description: User not found
+  
+  /users:
+    get:
+      tags:
+        - admin
+      summary: Gets all user IDs
+      description: 'Admin-only operation.'
+      operationId: getUser
+      responses:
+        '200':
+          description: Succesful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+                  format: int64
+        '400':
+          description: Invalid user object
+
+  /gacha/roll:
+    get:
+      tags:
+        - gacha
+      summary: Rolls for a random gacha
+      description: 'Returns a single ID of a random gacha in the response body.'
+      operationId: getGachaRoll
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int64
+                example: 1
+  /gacha:
+    get:
+      tags:
+        - gacha
+      summary: Gets the complete gacha collection
+      description: 'Returns a collection of all gachas. Can be filtered by rarity.'
+      operationId: getGachas
+      parameters:
+        - name: rarity
           in: query
           schema:
-            type: string
-        - name: model
-          in: query
-          schema:
-            type: string
-        - name: factory
-          in: query
-          schema:
-            type: string
+            $ref: '#/components/schemas/Rarity'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'    
+    post:
+      tags:
+        - admin
+      summary: Puts a new gacha in the system
+      description: 'Admin-only operation. Returns the ID of the new gacha in the response body.'
+      operationId: postGacha
+      requestBody:
+        $ref: '#/components/requestBodies/Gacha'
+      responses:
+        '201':
+          $ref: '#/components/responses/ResourceCreated'
+        '400':
+            description: Invalid gacha object
+      security:
+        - OAuth2: [admin]
+  /gacha/{id}:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    get:
+      tags:
+        - gacha
+      summary: Gets informations of a gacha
+      description: ''
+      operationId: getGachaById
+      responses:
+        '200':
+            description: Successful operation
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Gacha'
+        '404':
+            description: Gacha not found
+    put:
+      tags:
+        - admin
+      summary: Edits a gacha in the system
+      description: 'Admin-only operation.'
+      operationId: putGacha
+      requestBody:
+        $ref: '#/components/requestBodies/Gacha'
+      responses:
+        '200':
+            description: Successful operation
+        '400':
+            description: Invalid gacha object
+        '404':
+            description: Gacha not found
+    delete:
+      tags:
+        - admin
+      summary: Deletes a gacha from the system
+      description: 'Admin-only operation.'
+      operationId: deleteGacha
+      responses:
+        '200':
+            description: Successful operation
+        '404':
+            description: Gacha not found
+      security:
+        - OAuth2: [admin]
+
+  /auction:
+    get:
+      tags:
+        - auction
+        - admin
+      summary: Gets auctions
+      description: 'Optional `status` parameter to query on open, closed or hidden auctions. Users can only see open auctions. Admins can see every auction.'
+      operationId: getAuctions
+      parameters:
         - name: status
           in: query
+          description: Status to filter auction list
+          required: false
           schema:
-            $ref: '#/components/schemas/Status'
+            $ref: '#/components/schemas/AuctionStatus'
       responses:
         '200':
           description: Succesful operation
           content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Machine'
-  /machine/{id}:
-    get:
-      tags:
-        - machines
-      summary: Gets single machine infos by machine ID
-      description: ''
-      operationId: getMachineByID
-      parameters:
-        - $ref: '#/components/parameters/id'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Machine'
-        '404':
-          description: ID not found
-
-  /data:
-    get:
-      tags:
-        - data
-      summary: Gets data filtered by machine ID, data type, and time window
-      description: '`machineId`, `dataType`, `from` (date) and `to` (date) parameters required in query.'
-      operationId: getData
-      parameters:
-        - name: machineId
-          in: query
-          schema:
-            type: string
-        - name: dataType
-          in: query
-          schema:
-            type: string
-        - name: from
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-        - name: to
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: Succesful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DataWindow'
-
-  /kpi:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Auction'
     post:
       tags:
-        - KPIs
-      summary: Posts new KPI value
+        - auction
+      summary: Creates a new auction
       description: ''
-      operationId: postKPI
+      operationId: postAuction
       requestBody:
-        description: 'Required KPI object to post'
+        description: Gacha to be auctioned and starting bid
+        required: true
+        content:
+          applcation/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  format: int64
+                  example: 395
+                startingBid:
+                  type: integer
+                  format: int64
+                  example: 5
+      responses:
+        '201':
+          $ref: '#/components/responses/ResourceCreated'
+        '400':
+          description: Invalid auction object
+  /auction/{id}:
+    parameters:
+      - $ref: '#/components/parameters/id'    
+    get:
+      tags:
+        - auction
+      summary: Gets an auction by id
+      description: 'Users can see other users&rsquo; auctions only if they are still open.'
+      operationId: getAuctionById
+      responses:
+        '200':
+          description: Succesful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auction'
+        '404':
+          description: Auction not found
+    post:
+      tags:
+        - auction
+      summary: Puts a new bid on an auction
+      description: 'Returns the id of the new bid in the response body.'
+      operationId: postAuctionBid
+      requestBody:
+        description: Bid to be posted
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/KPI'
+              $ref: '#/components/schemas/Bid'
       responses:
         '201':
-          description: Resouce created succesfully
+          $ref: '#/components/responses/ResourceCreated'
         '400':
-          description: Invalid KPI object
-
-  /kpi/{name}:
+          description: Invalid bid
+    put:
+      tags:
+        - auction
+        - admin
+      summary: Edits or closes an auction
+      description: 'Admin or system-only operation.'
+      operationId: putAuction
+      requestBody:
+        $ref: '#/components/requestBodies/Auction'
+      responses:
+        '200':
+          description: Succesful operation
+        '400':
+          description: Invalid auction object
+        '404':
+          description: Auction not found
+      security:
+        - OAuth2: [admin]
+    delete:
+      tags:
+        - auction
+        - admin
+      summary: Deletes an auction
+      description: ''
+      operationId: deleteAuction
+      responses:
+        '200':
+          description: Succesful operation
+        '404':
+          description: Auction not found
+      security:
+        - OAuth2: [admin]
+    
+  /transaction:
+    post:
+      tags:
+        - transaction
+      summary: Creates a new transaction
+      description: 'System-only operation.'
+      operationId: postTransaction
+      requestBody:
+        $ref: '#/components/requestBodies/Transaction'
+      responses:
+        '201':
+          $ref: '#/components/responses/ResourceCreated'
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+  /transaction/{id}:
     get:
       tags:
-        - KPIs
-      summary: Gets current KPI value by name
-      description: ''
-      operationId: getKPI
+        - transaction
+      summary: 'Gets a transaction by id'
+      description: 'Users can only see their own transactions.'
+      operationId: getTransactionById
       parameters:
         - $ref: '#/components/parameters/id'
       responses:
@@ -222,105 +456,280 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KPI'
+                $ref: '#/components/schemas/Transaction'
         '404':
-          description: Name not found
-
+          description: Transaction not found
+    put:  
+      tags:
+        - admin
+      summary: 'Edits a transaction by id'
+      description: 'Admin-only and system-only operation'
+      operationId: putTransactionById
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        $ref: '#/components/requestBodies/Transaction'
+      responses:
+        '200':
+          description: Successful operation
+        '404':
+          description: Transaction not found
+      security:
+        - OAuth2: [admin]
+  
+  /admin/login:
+    post:
+      tags:
+        - admin
+      summary: Logs admin into the system
+      description: ''
+      operationId: loginAdmin
+      requestBody:
+        description: 'Username and password object'
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Invalid username/password supplied
+      security:
+        - OAuth2: [admin]
+  /admin/logout:
+    delete:
+      tags:
+        - admin
+      summary: Logs out current logged in admin session
+      description: ''
+      operationId: logoutAdmin
+      responses:
+        default:
+          description: Successful operation
+      security:
+        - OAuth2: [admin]
 components:
   parameters:
     id:
       name: id
       in: path
-      description: 'ID or name that needs to be fetched.'
+      description: 'ID that needs to be fetched.'
       required: true
       schema: 
         type: string
         
   schemas:
-    Machine:
+    User:
+      type: object
+      properties:
+        loginData:
+          $ref: '#/components/schemas/LoginData'
+        gameData:
+          $ref: '#/components/schemas/GameData'
+    LoginData:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 14528
+        username:
+          type: string
+          example: ResettiLover
+        email:
+          type: string
+          example: resetti4ever@email.com
+    GameData:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 14528
+        screenName:
+          type: string
+          example: ResettiHater
+        currency:
+          type: integer
+          format: int64
+          example: 200
+        collection:
+          $ref: '#/components/schemas/Collection'
+
+    Gacha:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: Tom Nook
+        rarity:
+          $ref: '#/components/schemas/Rarity'
+        picture:
+          type: string
+          format: binary
+    Collection:
+      type: array
+      items:
+        type: integer
+        format: int64
+        example: 
+          - 1
+          - 32
+          - 539
+    Transaction:
       type: object
       properties:
         id:
           type: integer
           format: int64
           example: 152
-        machineType:
-          type: string
-          example: Laser cutter
-        model:
-          type: string
-          example: ACME Inc. Laser cutter 25A
-        factory:
-          type: string
-          example: Ghezzano Plant 1
-        status:
-          $ref: '#/components/schemas/Status'
-    
-    KPI:
-      type: object
-      properties:
-        name:
-          type: string
-          example: 'Average pieces / hour'
-        value:
-          type: number
-          example: 27
-        code:
+        userId:
           type: integer
           format: int64
+          example: 14528
+        date:
+          type: string
+          format: date-time
+        transactionType:
+          type: string
+          enum:
+            - currency
+            - roll
+            - bid
+            - auction
+          example: bid
+        value:
+          type: integer
+          format: int64
+          example: -25
+        status:
+          type: string
+          description: Transaction status
+          example: pending
+          enum:
+            - pending
+            - complete
+            - canceled
+    TransactionHistory:
+      type: array
+      items:
+        $ref: '#/components/schemas/Transaction'
+    Bid:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+          example: 14528
+        bid:
+          type: integer
+          format: int64
+          example: 50
+        date:
+          type: string
+          format: date-time
+    Auction:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 552
+        gachaId:
+          type: integer
+          format: int64
+          example: 1
+        startingBid:
+          type: integer
+          format: int64
+          example: 5
+        bids:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bid'
+        status:
+          $ref: '#/components/schemas/AuctionStatus'
+    
+    Rarity:
+      type: string
+      example: Rare
+      enum:
+        - Common
+        - Uncommon
+        - Rare
+        - Once in a blue moon
+    AuctionStatus:
+      type: string
+      default: open
+      enum:
+        - open
+        - closed
+        - hidden
+
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        type:
+          type: string
         message:
           type: string
         
-
-    DataPoint:
-      type: object
-      properties:
-        dataType:
-          type: string
-          example: '°C'
-        value:
-          type: number
-          example: 99
-        timestamp:
-          type: string
-          format: date-time
-
-    DataWindow:
-      type: array
-      items:
-        $ref: '#/components/schemas/DataPoint'
-
-    Alert:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-          example: 152
-        timestamp:
-          type: string
-          format: date-time
-        severity:
-          $ref: '#/components/schemas/Severity'
-        machineId:
-          type: string
-          example: 152
-        alertDescription:
-          type: string
-          example: "Cyan ink cartridge is depleted."
-
-    Severity:
-      type: string
-      enum:
-        - red
-        - yellow
-        - grey
-    Status:
-      type: string
-      enum:
-        - operational
-        - on
-        - off
-        - maintenance
-            
   responses:
+    ResourceCreated:
+      description: Resource created successfully
+      content:
+        application/json:
+          schema:
+            type: integer
+            format: int64
+            example: 41938
+
+  requestBodies:
+    User:
+      description: User object to be created or updated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/User'
+    Gacha:
+      description: Gacha object to be created or updated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Gacha'
+    Transaction:
+      description: Transaction to be created or updated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Transaction'
+    Auction:
+      description: Auction to be created or updated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Auction'
+            
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://example.com/oauth/authorize
+          tokenUrl: https://example.com/oauth/token
+          scopes:
+            admin: access to admin-only operations
