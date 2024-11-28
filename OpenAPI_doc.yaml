@@ -1,0 +1,326 @@
+openapi: 3.0.3
+info:
+  title: Industry 5.0 API
+  description: |-
+    Group C, Topic 4 OpenAPI doc (on topic 2, 3).
+
+  #termsOfService: http://swagger.io/terms/
+  #contact:
+  #  email: apiteam@swagger.io
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 0.0.1
+#externalDocs:
+#  description: Find out more about Swagger
+#  url: http://swagger.io
+#servers:
+#  - url: 
+tags:
+  - name: alerts
+    description: Alerts history
+  - name: data
+    description: DB data access
+  - name: machines
+    description: Machines data
+  - name: KPIs
+    description: KPIs access
+paths:
+
+  /alert:
+    post:
+      tags:
+        - alerts
+      summary: Posts new alert
+      description: ''
+      operationId: postAlert
+      requestBody:
+        description: 'Required Alert object to post'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Alert'
+      responses:
+        '201':
+          description: Resouce created succesfully
+        '400':
+          description: Invalid Alert object
+    get:
+      tags:
+        - alerts
+      summary: Gets alerts fitered by machine ID, severity, and time window
+      description: '`machineId`, `severity`, `from` (date), `to` (date) parameters optional in query.'
+      operationId: getAlerts
+      parameters:
+        - name: machineId
+          in: query
+          schema:
+            type: string
+        - name: severity
+          in: query
+          schema:
+            $ref: '#/components/schemas/Severity'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Succesful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Alert'
+  /alert/{id}:
+    get:
+      tags:
+        - alerts
+      summary: Gets single alert by alert ID
+      operationId: getAlertByID
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '404':
+          description: ID not found
+      
+
+  /machine:
+    get:
+      tags:
+        - machines
+      summary: Gets machines filtered by machine type, model, factory and status
+      description: '`machineType`, `model` `factory`, `status` parameters required in query.'
+      operationId: getMachines
+      parameters:
+        - name: machineType
+          in: query
+          schema:
+            type: string
+        - name: model
+          in: query
+          schema:
+            type: string
+        - name: factory
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/Status'
+      responses:
+        '200':
+          description: Succesful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Machine'
+  /machine/{id}:
+    get:
+      tags:
+        - machines
+      summary: Gets single machine infos by machine ID
+      description: ''
+      operationId: getMachineByID
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Machine'
+        '404':
+          description: ID not found
+
+  /data:
+    get:
+      tags:
+        - data
+      summary: Gets data filtered by machine ID, data type, and time window
+      description: '`machineId`, `dataType`, `from` (date) and `to` (date) parameters required in query.'
+      operationId: getData
+      parameters:
+        - name: machineId
+          in: query
+          schema:
+            type: string
+        - name: dataType
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Succesful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataWindow'
+
+  /kpi:
+    post:
+      tags:
+        - KPIs
+      summary: Posts new KPI value
+      description: ''
+      operationId: postKPI
+      requestBody:
+        description: 'Required KPI object to post'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KPI'
+      responses:
+        '201':
+          description: Resouce created succesfully
+        '400':
+          description: Invalid KPI object
+
+  /kpi/{name}:
+    get:
+      tags:
+        - KPIs
+      summary: Gets current KPI value by name
+      description: ''
+      operationId: getKPI
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KPI'
+        '404':
+          description: Name not found
+
+components:
+  parameters:
+    id:
+      name: id
+      in: path
+      description: 'ID or name that needs to be fetched.'
+      required: true
+      schema: 
+        type: string
+        
+  schemas:
+    Machine:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 152
+        machineType:
+          type: string
+          example: Laser cutter
+        model:
+          type: string
+          example: ACME Inc. Laser cutter 25A
+        factory:
+          type: string
+          example: Ghezzano Plant 1
+        status:
+          $ref: '#/components/schemas/Status'
+    
+    KPI:
+      type: object
+      properties:
+        name:
+          type: string
+          example: 'Average pieces / hour'
+        value:
+          type: number
+          example: 27
+        code:
+          type: integer
+          format: int64
+        message:
+          type: string
+        
+
+    DataPoint:
+      type: object
+      properties:
+        dataType:
+          type: string
+          example: '°C'
+        value:
+          type: number
+          example: 99
+        timestamp:
+          type: string
+          format: date-time
+
+    DataWindow:
+      type: array
+      items:
+        $ref: '#/components/schemas/DataPoint'
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 152
+        timestamp:
+          type: string
+          format: date-time
+        severity:
+          $ref: '#/components/schemas/Severity'
+        machineId:
+          type: string
+          example: 152
+        alertDescription:
+          type: string
+          example: "Cyan ink cartridge is depleted."
+
+    Severity:
+      type: string
+      enum:
+        - red
+        - yellow
+        - grey
+    Status:
+      type: string
+      enum:
+        - operational
+        - on
+        - off
+        - maintenance
+            
+  responses:
